@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>RDB 快照是怎么实现的？ | 小林coding</title>
+<meta content="VuePress 1.9.7" name="generator"/>
+<link href="https://cdn.xiaolincoding.com/icon.webp" rel="icon"/>
+
+
+<meta content="图解计算机基础，覆盖 Java 后端面试，让天下没有难懂的八股文！" name="description"/>
+<meta content="2026-04-13T16:00:00.000Z" property="article:modified_time"/>
+<meta content="小林coding" property="og:site_name"/>
+<meta content="RDB 快照是怎么实现的？" property="og:title"/>
+<meta content="article" property="og:type"/>
+<meta content="https://xiaolincoding.com/redis/storage/rdb.html" property="og:url"/>
+<meta content="https://cdn.xiaolincoding.com/icon.webp" property="og:image"/>
+<meta content="RDB 快照是怎么实现的？" name="twitter:title"/>
+<meta content="https://xiaolincoding.com/redis/storage/rdb.html" name="twitter:url"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="https://cdn.xiaolincoding.com/icon.webp" name="twitter:image"/>
+<meta content="Written by" name="twitter:label1"/>
+<meta content="code-mRA9eqEXsx" name="baidu-site-verification"/>
+<meta content="图解计算机基础，覆盖 Java 后端面试，让天下没有难懂的八股文！" property="og:description"/>
+<link as="style" href="../../assets/css/0.styles.0ab918d2.css" rel="preload"/>
+<link href="../../assets/css/0.styles.0ab918d2.css" rel="stylesheet"/>
+</head>
+<body>
+<div data-server-rendered="true" id="app"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg aria-hidden="true" class="icon" role="img" viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z" fill="currentColor"></path></svg></div> <a class="home-link router-link-active" href="../../home.html"><img alt="小林coding" class="logo" src="https://cdn.xiaolincoding.com/icon.webp"/> <span class="site-name can-hide">小林coding</span></a> <div class="links"><form class="algolia-search-wrapper search-box" id="search-form" role="search"><input class="search-query" id="algolia-search-input"/></form> <nav class="nav-links can-hide"><div class="nav-item"><a class="nav-link" href="../../home.html">
+  首页
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="图解系列" class="dropdown-title" type="button"><span class="title">图解系列</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../network/index.html">
+  《图解网络》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../os/index.html">
+  《图解操作系统》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../mysql/index.html">
+  《图解MySQL》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link router-link-active" href="../index.html">
+  《图解Redis》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/agent/" rel="noopener noreferrer" target="_blank">
+  《图解Agent》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/claudecode/" rel="noopener noreferrer" target="_blank">
+  《图解Claude Code》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/codex/" rel="noopener noreferrer" target="_blank">
+  《图解Codex》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li></ul></div></div><div class="nav-item"><a class="nav-link" href="../../interview/index.html">
+  面试八股题
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="🔥Agent项目🔥" class="dropdown-title" type="button"><span class="title">🔥Agent项目🔥</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/devflow.html">
+  🌟DevFlow AI 项目🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/mewhelp.html">
+  🌟MewHelp 智能客服项目🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/mewcode.html">
+  MewCode Agent 项目
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/aioncallagent.html">
+  智能 OnCall Agent 项目
+</a></li></ul></div></div><div class="nav-item"><a class="nav-link" href="https://www.xiaolincoding.com/project/xiaolinnote.html">
+  🔥Agent八股🔥
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="🌟求职训练营🌟" class="dropdown-title" type="button"><span class="title">🌟求职训练营🌟</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/llm_offer.html">
+  小林Agent开发训练营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/sijiao_offer.html">
+  小林后端+AI开发1v1私教（社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/ai_quanzhan_offer.html">
+  小林AI全栈开发私教营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/cpp_offer.html">
+  小林C++开发训练营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/cekai_offer.html">
+  小林测试开发训练营（校招、社招）
+</a></li></ul></div></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="求职工具" class="dropdown-title" type="button"><span class="title">求职工具</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/xiaolinjianli/">
+  🌟小林简历🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/pdf.html">
+  图解PDF下载
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://www.givemeoc.com/?aff=57878" rel="noopener noreferrer" target="_blank">
+  校招表格汇总
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://quiz.playoffer.cn/?aff=956" rel="noopener noreferrer" target="_blank">
+  AI笔试神器
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://www.xiaolincoding.com/openai/gpt.html" rel="noopener noreferrer" target="_blank">
+  ChatGPT充值
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="http://upclaude.com/i/xiaolincoding3" rel="noopener noreferrer" target="_blank">
+  Claude充值
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/openai/letaicode.html">
+  AI中转站
+</a></li></ul></div></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="其他" class="dropdown-title" type="button"><span class="title">其他</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../backend_interview/index.html">
+  互联网大厂后端面经
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/salary/">
+  互联网校招薪资盘点
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/reader_nb/">
+  互联网大厂求职心得
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/">
+  小林学习和面试心得
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/update.html">
+  网站更新动态
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://github.com/xiaolincoder/CS-Base" rel="noopener noreferrer" target="_blank">
+  Github地址
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://icnaxnmh86kx.feishu.cn/share/base/form/shrcneQ2yqySZ7s74EfiVKFDdwv" rel="noopener noreferrer" target="_blank">
+  问题反馈
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li></ul></div></div> <!-- --></nav></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><nav class="nav-links"><div class="nav-item"><a class="nav-link" href="../../home.html">
+  首页
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="图解系列" class="dropdown-title" type="button"><span class="title">图解系列</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../network/index.html">
+  《图解网络》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../os/index.html">
+  《图解操作系统》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../mysql/index.html">
+  《图解MySQL》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link router-link-active" href="../index.html">
+  《图解Redis》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/agent/" rel="noopener noreferrer" target="_blank">
+  《图解Agent》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/claudecode/" rel="noopener noreferrer" target="_blank">
+  《图解Claude Code》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/codex/" rel="noopener noreferrer" target="_blank">
+  《图解Codex》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li></ul></div></div><div class="nav-item"><a class="nav-link" href="../../interview/index.html">
+  面试八股题
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="🔥Agent项目🔥" class="dropdown-title" type="button"><span class="title">🔥Agent项目🔥</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/devflow.html">
+  🌟DevFlow AI 项目🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/mewhelp.html">
+  🌟MewHelp 智能客服项目🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/mewcode.html">
+  MewCode Agent 项目
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/aioncallagent.html">
+  智能 OnCall Agent 项目
+</a></li></ul></div></div><div class="nav-item"><a class="nav-link" href="https://www.xiaolincoding.com/project/xiaolinnote.html">
+  🔥Agent八股🔥
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="🌟求职训练营🌟" class="dropdown-title" type="button"><span class="title">🌟求职训练营🌟</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/llm_offer.html">
+  小林Agent开发训练营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/sijiao_offer.html">
+  小林后端+AI开发1v1私教（社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/ai_quanzhan_offer.html">
+  小林AI全栈开发私教营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/cpp_offer.html">
+  小林C++开发训练营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/cekai_offer.html">
+  小林测试开发训练营（校招、社招）
+</a></li></ul></div></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="求职工具" class="dropdown-title" type="button"><span class="title">求职工具</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/xiaolinjianli/">
+  🌟小林简历🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/pdf.html">
+  图解PDF下载
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://www.givemeoc.com/?aff=57878" rel="noopener noreferrer" target="_blank">
+  校招表格汇总
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://quiz.playoffer.cn/?aff=956" rel="noopener noreferrer" target="_blank">
+  AI笔试神器
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://www.xiaolincoding.com/openai/gpt.html" rel="noopener noreferrer" target="_blank">
+  ChatGPT充值
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="http://upclaude.com/i/xiaolincoding3" rel="noopener noreferrer" target="_blank">
+  Claude充值
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/openai/letaicode.html">
+  AI中转站
+</a></li></ul></div></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="其他" class="dropdown-title" type="button"><span class="title">其他</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../backend_interview/index.html">
+  互联网大厂后端面经
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/salary/">
+  互联网校招薪资盘点
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/reader_nb/">
+  互联网大厂求职心得
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/">
+  小林学习和面试心得
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/update.html">
+  网站更新动态
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://github.com/xiaolincoder/CS-Base" rel="noopener noreferrer" target="_blank">
+  Github地址
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://icnaxnmh86kx.feishu.cn/share/base/form/shrcneQ2yqySZ7s74EfiVKFDdwv" rel="noopener noreferrer" target="_blank">
+  问题反馈
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li></ul></div></div> <!-- --></nav> <ul class="sidebar-links"><li><section class="sidebar-group collapsable depth-0"><p class="sidebar-heading"><span>01｜前言</span> <span class="arrow right"></span></p> <!-- --></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>02｜基础篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../base/wath_is_redis.html">什么是 Redis？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>03｜面试篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../base/redis_interview.html">Redis 常见面试题</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>04｜数据类型篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../data_struct/command.html">Redis 常见数据类型和应用场景</a></li><li><a class="sidebar-link" href="../data_struct/data_struct.html">Redis 数据结构</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>05｜持久化篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="aof.html">AOF 持久化是怎么实现的？</a></li><li><a aria-current="page" class="active sidebar-link" href="rdb.html">RDB 快照是怎么实现的？</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a class="sidebar-link" href="rdb.html#快照怎么用">快照怎么用？</a></li><li class="sidebar-sub-header"><a class="sidebar-link" href="rdb.html#执行快照时-数据能被修改吗">执行快照时，数据能被修改吗？</a></li><li class="sidebar-sub-header"><a class="sidebar-link" href="rdb.html#rdb-和-aof-合体">RDB 和 AOF 合体</a></li></ul></li><li><a class="sidebar-link" href="bigkey_aof_rdb.html">Redis 大 Key 对持久化有什么影响？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>06｜功能篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../module/strategy.html">Redis 过期删除策略和内存淘汰策略有什么区别？</a></li><li><a class="sidebar-link" href="../module/setnx.html">多节点争抢资源， Redis 分布式锁是怎么实现的？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>07｜高可用篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../cluster/master_slave_replication.html">主从复制是怎么实现的？</a></li><li><a class="sidebar-link" href="../cluster/sentinel.html">为什么要有哨兵？</a></li><li><a class="sidebar-link" href="../cluster/cluster.html">为什么要有 Redis Cluster 集群？</a></li><li><a class="sidebar-link" href="../cluster/redlock.html">如何保证 Redis 分布式锁的高可用和高性能？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>08｜缓存篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../cluster/cache_problem.html">什么是缓存雪崩、击穿、穿透？</a></li><li><a class="sidebar-link" href="../architecture/mysql_redis_consistency.html">数据库和缓存如何保证一致性？</a></li></ul></section></li></ul> </aside> <div><main class="page" style="/*padding-right: 80px;*/"> <div class="theme-default-content content__default" style="max-width:740px;margin:0px auto;padding:2rem 2.5rem;"><h1 id="rdb-快照是怎么实现的"><a class="header-anchor" href="#rdb-快照是怎么实现的">#</a> RDB 快照是怎么实现的？</h1> <p>大家好，我是小林哥。</p> <p>虽说 Redis 是内存数据库，但是它为数据的持久化提供了两个技术。</p> <p>分别是「 AOF 日志和 RDB 快照」。</p> <p>这两种技术都会各用一个日志文件来记录信息，但是记录的内容是不同的。</p> <ul><li>AOF 文件的内容是操作命令；</li> <li>RDB 文件的内容是二进制数据。</li></ul> <p>关于 AOF 持久化的原理我在上一篇已经介绍了，今天主要讲下 <strong>RDB 快照</strong>。</p> <p>所谓的快照，就是记录某一个瞬间东西，比如当我们给风景拍照时，那一个瞬间的画面和信息就记录到了一张照片。</p> <p>所以，RDB 快照就是记录某一个瞬间的内存数据，记录的是实际数据，而 AOF 文件记录的是命令操作的日志，而不是实际的数据。</p> <p>因此在 Redis 恢复数据时， RDB 恢复数据的效率会比 AOF 高些，因为直接将 RDB 文件读入内存就可以，不需要像 AOF 那样还需要额外执行操作命令的步骤才能恢复数据。</p> <p>接下来，就来具体聊聊 RDB 快照 。</p> <h2 id="快照怎么用"><a class="header-anchor" href="#快照怎么用">#</a> 快照怎么用？</h2> <p>要熟悉一个东西，先看看怎么用是比较好的方式。</p> <p>Redis 提供了两个命令来生成 RDB 文件，分别是 <code>save</code> 和 <code>bgsave</code>，他们的区别就在于是否在「主线程」里执行：</p> <ul><li>执行了 save 命令，就会在主线程生成 RDB 文件，由于和执行操作命令在同一个线程，所以如果写入 RDB 文件的时间太长，<strong>会阻塞主线程</strong>；</li> <li>执行了 bgsave 命令，会创建一个子进程来生成 RDB 文件，这样可以<strong>避免主线程的阻塞</strong>；</li></ul> <p>RDB 文件的加载工作是在服务器启动时自动执行的，Redis 并没有提供专门用于加载 RDB 文件的命令。</p> <p>Redis 还可以通过配置文件的选项来实现每隔一段时间自动执行一次 bgsave 命令，默认会提供以下配置：</p> <div class="language- extra-class"><pre class="language-text"><code>save 900 1
+save 300 10
+save 60 10000
+</code></pre></div><p>别看选项名叫 save，实际上执行的是 bgsave 命令，也就是会创建子进程来生成 RDB 快照文件。</p> <p>只要满足上面条件的任意一个，就会执行 bgsave，它们的意思分别是：</p> <ul><li>900 秒之内，对数据库进行了至少 1 次修改；</li> <li>300 秒之内，对数据库进行了至少 10 次修改；</li> <li>60 秒之内，对数据库进行了至少 10000 次修改。</li></ul> <p>这里提一点，Redis 的快照是<strong>全量快照</strong>，也就是说每次执行快照，都是把内存中的「所有数据」都记录到磁盘中。</p> <p>所以可以认为，执行快照是一个比较重的操作，如果频率太频繁，可能会对 Redis 性能产生影响。如果频率太低，服务器故障时，丢失的数据会更多。</p> <p>通常可能设置至少 5 分钟才保存一次快照，这时如果 Redis 出现宕机等情况，则意味着最多可能丢失 5 分钟数据。</p> <p>这就是 RDB 快照的缺点，在服务器发生故障时，丢失的数据会比 AOF 持久化的方式更多，因为 RDB 快照是全量快照的方式，因此执行的频率不能太频繁，否则会影响 Redis 性能，而 AOF 日志可以以秒级的方式记录操作命令，所以丢失的数据就相对更少。</p> <h2 id="执行快照时-数据能被修改吗"><a class="header-anchor" href="#执行快照时-数据能被修改吗">#</a> 执行快照时，数据能被修改吗？</h2> <p>那问题来了，执行 bgsave 过程中，由于是交给子进程来构建 RDB 文件，主线程还是可以继续工作的，此时主线程可以修改数据吗？</p> <p>如果不可以修改数据的话，那这样性能一下就降低了很多。如果可以修改数据，又是如何做到呢？</p> <p>直接说结论吧，执行 bgsave 过程中，Redis 依然<strong>可以继续处理操作命令</strong>的，也就是数据是能被修改的。</p> <p>那具体如何做到呢？关键的技术就在于<strong>写时复制技术（Copy-On-Write, COW）。</strong></p> <p>执行 bgsave 命令的时候，会通过 <code>fork()</code> 创建子进程，此时子进程和父进程是共享同一片内存数据的，因为创建子进程的时候，会复制父进程的页表，但是页表指向的物理内存还是一个。</p> <p><img alt="图片" src="https://cdn.xiaolincoding.com//mysql/other/c34a9d1f58d602ff1fe8601f7270baa7.png"/></p> <p>只有在发生修改内存数据的情况时，物理内存才会被复制一份。</p> <p><img alt="图片" src="https://cdn.xiaolincoding.com//mysql/other/ebd620db8a1af66fbeb8f4d4ef6adc68.png"/></p> <p>这样的目的是为了减少创建子进程时的性能损耗，从而加快创建子进程的速度，毕竟创建子进程的过程中，是会阻塞主线程的。</p> <p>所以，创建 bgsave 子进程后，由于共享父进程的所有内存数据，于是就可以直接读取主线程（父进程）里的内存数据，并将数据写入到 RDB 文件。</p> <p>当主线程（父进程）对这些共享的内存数据也都是只读操作，那么，主线程（父进程）和 bgsave 子进程相互不影响。</p> <p>但是，如果主线程（父进程）要<strong>修改共享数据里的某一块数据</strong>（比如键值对 <code>A</code>）时，就会发生写时复制，于是这块数据的<strong>物理内存就会被复制一份（键值对 <code>A'</code>）</strong>，然后<strong>主线程在这个数据副本（键值对 <code>A'</code>）进行修改操作</strong>。与此同时，<strong>bgsave 子进程可以继续把原来的数据（键值对 <code>A</code>）写入到 RDB 文件</strong>。</p> <p>就是这样，Redis 使用 bgsave 对当前内存中的所有数据做快照，这个操作是由 bgsave 子进程在后台完成的，执行时不会阻塞主线程，这就使得主线程同时可以修改数据。</p> <p>细心的同学，肯定发现了，bgsave 快照过程中，如果主线程修改了共享数据，<strong>发生了写时复制后，RDB 快照保存的是原本的内存数据</strong>，而主线程刚修改的数据，是没办法在这一时间写入 RDB 文件的，只能交由下一次的 bgsave 快照。</p> <p>所以 Redis 在使用 bgsave 快照过程中，如果主线程修改了内存数据，不管是否是共享的内存数据，RDB 快照都无法写入主线程刚修改的数据，因为此时主线程（父进程）的内存数据和子进程的内存数据已经分离了，子进程写入到 RDB 文件的内存数据只能是原本的内存数据。</p> <p>如果系统恰好在 RDB 快照文件创建完毕后崩溃了，那么 Redis 将会丢失主线程在快照期间修改的数据。</p> <p>另外，写时复制的时候会出现这么个极端的情况。</p> <p>在 Redis 执行 RDB 持久化期间，刚 fork 时，主进程和子进程共享同一物理内存，但是途中主进程处理了写操作，修改了共享内存，于是当前被修改的数据的物理内存就会被复制一份。</p> <p>那么极端情况下，<strong>如果所有的共享内存都被修改，则此时的内存占用是原先的 2 倍。</strong></p> <p>所以，针对写操作多的场景，我们要留意下快照过程中内存的变化，防止内存被占满了。</p> <h2 id="rdb-和-aof-合体"><a class="header-anchor" href="#rdb-和-aof-合体">#</a> RDB 和 AOF 合体</h2> <p>尽管 RDB 比 AOF 的数据恢复速度快，但是快照的频率不好把握：</p> <ul><li>如果频率太低，两次快照间一旦服务器发生宕机，就可能会比较多的数据丢失；</li> <li>如果频率太高，频繁写入磁盘和创建子进程会带来额外的性能开销。</li></ul> <p>那有没有什么方法既有 RDB 恢复速度快的优点，又有 AOF 丢失数据少的优点呢？</p> <p>当然有，那就是将 RDB 和 AOF 合体使用，这个方法是在 Redis 4.0 提出的，该方法叫<strong>混合使用 AOF 日志和内存快照</strong>，也叫混合持久化。</p> <p>如果想要开启混合持久化功能，可以在 Redis 配置文件将下面这个配置项设置成 yes：</p> <div class="language- extra-class"><pre class="language-text"><code>aof-use-rdb-preamble yes
+</code></pre></div><p>混合持久化工作在 <strong>AOF 日志重写过程</strong>。</p> <p>当开启了混合持久化时，在 AOF 重写日志时，<code>fork</code> 出来的重写子进程会先将与主线程共享的内存数据以 RDB 方式写入到 AOF 文件，然后主线程处理的操作命令会被记录在重写缓冲区里，重写缓冲区里的增量命令会以 AOF 方式写入到 AOF 文件，写入完成后通知主进程将新的含有 RDB 格式和 AOF 格式的 AOF 文件替换旧的 AOF 文件。</p> <p>也就是说，使用了混合持久化，AOF 文件的<strong>前半部分是 RDB 格式的全量数据，后半部分是 AOF 格式的增量数据</strong>。</p> <p><img alt="图片" src="https://cdn.xiaolincoding.com//mysql/other/f67379b60d151262753fec3b817b8617.png"/></p> <p>这样的好处在于，重启 Redis 加载数据的时候，由于前半部分是 RDB 内容，这样<strong>加载的时候速度会很快</strong>。</p> <p>加载完 RDB 的内容后，才会加载后半部分的 AOF 内容，这里的内容是 Redis 后台子进程重写 AOF 期间，主线程处理的操作命令，可以使得<strong>数据更少的丢失</strong>。</p> <hr/> <p>最新的图解文章都在公众号首发，别忘记关注哦！！如果你想加入百人技术交流群，扫码下方二维码回复「加群」。</p> <p><img alt="img" src="https://cdn.xiaolincoding.com/gh/xiaolincoder/ImageHost3@main/%E5%85%B6%E4%BB%96/%E5%85%AC%E4%BC%97%E5%8F%B7%E4%BB%8B%E7%BB%8D.png"/></p></div> <footer class="page-edit" style="max-width: 740px;  margin: 0px auto;padding: 2rem 2.5rem;"><!-- --> <div class="last-updated"><span class="prefix">上次更新: </span> <span class="time">4/14/2026</span></div></footer> <div class="page-nav" style="max-width: 740px;  margin: 0px auto;padding: 2rem 2.5rem;"><p class="inner"><span class="prev">
+        ←
+        <a class="prev" href="aof.html">
+          AOF 持久化是怎么实现的？
+        </a></span> <span class="next"><a href="bigkey_aof_rdb.html">
+          Redis 大 Key 对持久化有什么影响？
+        </a>
+        →
+      </span></p></div> <!-- --></main></div> <aside class="page-sidebar"> <div class="page-side-toolbar"><!-- --> <div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/toc.png"/> <span class="show-txt">目录</span></div> <div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/toggle.png" width="30px"/> <span class="show-txt">侧边栏</span></div> <div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/dark.svg" width="30px"/> <span class="show-txt">夜间</span></div> <div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/wexin4.png" width="25px"/> <span class="show-txt">技术群</span> <div class="toc-container"><div class="pos-box"><div class="icon-arrow"></div> <div class="scroll-box" style="text-align:center"><span style="font-size:0.7rem;font-weight:bold;">关注小林的公众号，回复<span style="color:red;">「加群」</span>，拉你进百人技术交流群</span> <img height="180px" src="https://cdn.xiaolincoding.com/gh/xiaolincoder/xiaolincoding.jpeg" style="margin:10px;"/>
+	       公众号：小林coding
+              </div></div></div></div> <div class="option-box"><a href="https://www.xiaolincoding.com/project/agent_info.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/project.png" width="25px"/> <span class="show-txt">Agent项目</span></div></a></div> <div class="option-box"><a href="https://www.xiaolincoding.com/other/llm_offer.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/offer.png" width="25px"/> <span class="show-txt">训练营</span></div></a></div> <div class="option-box"><a href="https://mianshiya.com/?shareCode=xeu1wi"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/mianshiya_logo.jpeg" width="25px"/> <span class="show-txt">面试鸭</span></div></a></div> <div class="option-box"><a href="https://www.xiaolincoding.com/project/xiaolinjianli.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/xiaolinjianli.webp" width="25px"/> <span class="show-txt">做简历</span></div></a></div> <div class="option-box"><a href="https://www.xiaolincoding.com/cs_learn/pdf.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/download.png" width="25px"/> <span class="show-txt">PDF下载</span></div></a></div> <div class="option-box"><a href="https://www.xiaolincoding.com/cs_learn/reward.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/red-heart.png" width="25px"/> <span class="show-txt">赞赏我</span></div></a></div> <div class="option-box" style="padding-left:2px;text-align:center;" title="AOF 持久化是怎么实现的？"><a href="aof.html"><img class="nozoom" src="https://cdn.xiaolincoding.com/pre2.png" width="30px"/> <span class="show-txt">上一篇</span></a></div> <div class="option-box" style="padding-left:2px;text-align:center;" title="Redis 大 Key 对持久化有什么影响？"><a href="bigkey_aof_rdb.html"><img class="nozoom" src="https://cdn.xiaolincoding.com/next2.png" width="30px"/> <span class="show-txt">下一篇</span></a></div></div> <!-- --> </aside> <!-- --></div><div class="global-ui"><!-- --><div></div></div></div>
+
+</body>
+</html>

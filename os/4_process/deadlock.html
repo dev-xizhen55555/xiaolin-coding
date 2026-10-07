@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>5.4 怎么避免死锁？ | 小林coding</title>
+<meta content="VuePress 1.9.7" name="generator"/>
+<link href="https://cdn.xiaolincoding.com/icon.webp" rel="icon"/>
+
+
+<meta content="图解计算机基础，覆盖 Java 后端面试，让天下没有难懂的八股文！" name="description"/>
+<meta content="2026-04-13T16:00:00.000Z" property="article:modified_time"/>
+<meta content="小林coding" property="og:site_name"/>
+<meta content="5.4 怎么避免死锁？" property="og:title"/>
+<meta content="article" property="og:type"/>
+<meta content="https://xiaolincoding.com/os/4_process/deadlock.html" property="og:url"/>
+<meta content="https://cdn.xiaolincoding.com/icon.webp" property="og:image"/>
+<meta content="5.4 怎么避免死锁？" name="twitter:title"/>
+<meta content="https://xiaolincoding.com/os/4_process/deadlock.html" name="twitter:url"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="https://cdn.xiaolincoding.com/icon.webp" name="twitter:image"/>
+<meta content="Written by" name="twitter:label1"/>
+<meta content="code-mRA9eqEXsx" name="baidu-site-verification"/>
+<meta content="图解计算机基础，覆盖 Java 后端面试，让天下没有难懂的八股文！" property="og:description"/>
+<link as="style" href="../../assets/css/0.styles.0ab918d2.css" rel="preload"/>
+<link href="../../assets/css/0.styles.0ab918d2.css" rel="stylesheet"/>
+</head>
+<body>
+<div data-server-rendered="true" id="app"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg aria-hidden="true" class="icon" role="img" viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z" fill="currentColor"></path></svg></div> <a class="home-link router-link-active" href="../../home.html"><img alt="小林coding" class="logo" src="https://cdn.xiaolincoding.com/icon.webp"/> <span class="site-name can-hide">小林coding</span></a> <div class="links"><form class="algolia-search-wrapper search-box" id="search-form" role="search"><input class="search-query" id="algolia-search-input"/></form> <nav class="nav-links can-hide"><div class="nav-item"><a class="nav-link" href="../../home.html">
+  首页
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="图解系列" class="dropdown-title" type="button"><span class="title">图解系列</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../network/index.html">
+  《图解网络》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link router-link-active" href="../index.html">
+  《图解操作系统》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../mysql/index.html">
+  《图解MySQL》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../redis/index.html">
+  《图解Redis》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/agent/" rel="noopener noreferrer" target="_blank">
+  《图解Agent》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/claudecode/" rel="noopener noreferrer" target="_blank">
+  《图解Claude Code》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/codex/" rel="noopener noreferrer" target="_blank">
+  《图解Codex》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li></ul></div></div><div class="nav-item"><a class="nav-link" href="../../interview/index.html">
+  面试八股题
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="🔥Agent项目🔥" class="dropdown-title" type="button"><span class="title">🔥Agent项目🔥</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/devflow.html">
+  🌟DevFlow AI 项目🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/mewhelp.html">
+  🌟MewHelp 智能客服项目🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/mewcode.html">
+  MewCode Agent 项目
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/aioncallagent.html">
+  智能 OnCall Agent 项目
+</a></li></ul></div></div><div class="nav-item"><a class="nav-link" href="https://www.xiaolincoding.com/project/xiaolinnote.html">
+  🔥Agent八股🔥
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="🌟求职训练营🌟" class="dropdown-title" type="button"><span class="title">🌟求职训练营🌟</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/llm_offer.html">
+  小林Agent开发训练营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/sijiao_offer.html">
+  小林后端+AI开发1v1私教（社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/ai_quanzhan_offer.html">
+  小林AI全栈开发私教营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/cpp_offer.html">
+  小林C++开发训练营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/cekai_offer.html">
+  小林测试开发训练营（校招、社招）
+</a></li></ul></div></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="求职工具" class="dropdown-title" type="button"><span class="title">求职工具</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/xiaolinjianli/">
+  🌟小林简历🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/pdf.html">
+  图解PDF下载
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://www.givemeoc.com/?aff=57878" rel="noopener noreferrer" target="_blank">
+  校招表格汇总
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://quiz.playoffer.cn/?aff=956" rel="noopener noreferrer" target="_blank">
+  AI笔试神器
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://www.xiaolincoding.com/openai/gpt.html" rel="noopener noreferrer" target="_blank">
+  ChatGPT充值
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="http://upclaude.com/i/xiaolincoding3" rel="noopener noreferrer" target="_blank">
+  Claude充值
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/openai/letaicode.html">
+  AI中转站
+</a></li></ul></div></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="其他" class="dropdown-title" type="button"><span class="title">其他</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../backend_interview/index.html">
+  互联网大厂后端面经
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/salary/">
+  互联网校招薪资盘点
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/reader_nb/">
+  互联网大厂求职心得
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/">
+  小林学习和面试心得
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/update.html">
+  网站更新动态
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://github.com/xiaolincoder/CS-Base" rel="noopener noreferrer" target="_blank">
+  Github地址
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://icnaxnmh86kx.feishu.cn/share/base/form/shrcneQ2yqySZ7s74EfiVKFDdwv" rel="noopener noreferrer" target="_blank">
+  问题反馈
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li></ul></div></div> <!-- --></nav></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><nav class="nav-links"><div class="nav-item"><a class="nav-link" href="../../home.html">
+  首页
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="图解系列" class="dropdown-title" type="button"><span class="title">图解系列</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../network/index.html">
+  《图解网络》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link router-link-active" href="../index.html">
+  《图解操作系统》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../mysql/index.html">
+  《图解MySQL》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../redis/index.html">
+  《图解Redis》
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/agent/" rel="noopener noreferrer" target="_blank">
+  《图解Agent》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/claudecode/" rel="noopener noreferrer" target="_blank">
+  《图解Claude Code》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://xiaolinnote.com/codex/" rel="noopener noreferrer" target="_blank">
+  《图解Codex》
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li></ul></div></div><div class="nav-item"><a class="nav-link" href="../../interview/index.html">
+  面试八股题
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="🔥Agent项目🔥" class="dropdown-title" type="button"><span class="title">🔥Agent项目🔥</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/devflow.html">
+  🌟DevFlow AI 项目🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/mewhelp.html">
+  🌟MewHelp 智能客服项目🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/mewcode.html">
+  MewCode Agent 项目
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/aioncallagent.html">
+  智能 OnCall Agent 项目
+</a></li></ul></div></div><div class="nav-item"><a class="nav-link" href="https://www.xiaolincoding.com/project/xiaolinnote.html">
+  🔥Agent八股🔥
+</a></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="🌟求职训练营🌟" class="dropdown-title" type="button"><span class="title">🌟求职训练营🌟</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/llm_offer.html">
+  小林Agent开发训练营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/sijiao_offer.html">
+  小林后端+AI开发1v1私教（社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/ai_quanzhan_offer.html">
+  小林AI全栈开发私教营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/cpp_offer.html">
+  小林C++开发训练营（校招、社招）
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/other/cekai_offer.html">
+  小林测试开发训练营（校招、社招）
+</a></li></ul></div></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="求职工具" class="dropdown-title" type="button"><span class="title">求职工具</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/project/xiaolinjianli/">
+  🌟小林简历🌟
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/pdf.html">
+  图解PDF下载
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://www.givemeoc.com/?aff=57878" rel="noopener noreferrer" target="_blank">
+  校招表格汇总
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://quiz.playoffer.cn/?aff=956" rel="noopener noreferrer" target="_blank">
+  AI笔试神器
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://www.xiaolincoding.com/openai/gpt.html" rel="noopener noreferrer" target="_blank">
+  ChatGPT充值
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="http://upclaude.com/i/xiaolincoding3" rel="noopener noreferrer" target="_blank">
+  Claude充值
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/openai/letaicode.html">
+  AI中转站
+</a></li></ul></div></div><div class="nav-item"><div class="dropdown-wrapper"><button aria-label="其他" class="dropdown-title" type="button"><span class="title">其他</span> <span class="arrow right"></span></button> <ul class="nav-dropdown" style="display:none;"><li class="dropdown-item"><!-- --> <a class="nav-link" href="../../backend_interview/index.html">
+  互联网大厂后端面经
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/salary/">
+  互联网校招薪资盘点
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/reader_nb/">
+  互联网大厂求职心得
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/">
+  小林学习和面试心得
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link" href="https://www.xiaolincoding.com/cs_learn/update.html">
+  网站更新动态
+</a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://github.com/xiaolincoder/CS-Base" rel="noopener noreferrer" target="_blank">
+  Github地址
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li><li class="dropdown-item"><!-- --> <a class="nav-link external" href="https://icnaxnmh86kx.feishu.cn/share/base/form/shrcneQ2yqySZ7s74EfiVKFDdwv" rel="noopener noreferrer" target="_blank">
+  问题反馈
+  <span><svg aria-hidden="true" class="icon outbound" focusable="false" height="15" viewbox="0 0 100 100" width="15" x="0px" xmlns="http://www.w3.org/2000/svg" y="0px"><path d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z" fill="currentColor"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg> <span class="sr-only">(opens new window)</span></span></a></li></ul></div></div> <!-- --></nav> <ul class="sidebar-links"><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>01｜前言</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a aria-current="page" class="sidebar-link" href="../index.html">图解系统介绍</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>02｜硬件结构篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../1_hardware/how_cpu_run.html">2.1 CPU 是如何执行程序的？</a></li><li><a class="sidebar-link" href="../1_hardware/storage.html">2.2 磁盘比内存慢几万倍？</a></li><li><a class="sidebar-link" href="../1_hardware/how_to_make_cpu_run_faster.html">2.3 如何写出让 CPU 跑得更快的代码？</a></li><li><a class="sidebar-link" href="../1_hardware/cpu_mesi.html">2.4 CPU 缓存一致性</a></li><li><a class="sidebar-link" href="../1_hardware/how_cpu_deal_task.html">2.5 CPU 是如何执行任务的？</a></li><li><a class="sidebar-link" href="../1_hardware/soft_interrupt.html">2.6 什么是软中断？</a></li><li><a class="sidebar-link" href="../1_hardware/float.html">2.7  为什么 0.1 + 0.2 不等于 0.3 ？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>03｜系统结构篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../2_os_structure/linux_vs_windows.html">3.1 Linux 内核 vs Windows 内核</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>04｜内存管理篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../3_memory/vmem.html">4.1 为什么要有虚拟内存？</a></li><li><a class="sidebar-link" href="../3_memory/malloc.html">4.2 malloc 是如何分配内存的？</a></li><li><a class="sidebar-link" href="../3_memory/mem_reclaim.html">4.3 内存满了，会发生什么？</a></li><li><a class="sidebar-link" href="../3_memory/alloc_mem.html">4.4 在 4GB 物理内存的机器上，申请 8G 内存会怎么样？</a></li><li><a class="sidebar-link" href="../3_memory/cache_lru.html">4.5 如何避免预读失效和缓存污染的问题？</a></li><li><a class="sidebar-link" href="../3_memory/linux_mem.html">4.6 深入理解 Linux 虚拟内存管理</a></li><li><a class="sidebar-link" href="../3_memory/linux_mem2.html">4.7 深入理解 Linux 物理内存管理</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>05｜进程管理篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="process_base.html">5.1 进程、线程基础知识</a></li><li><a class="sidebar-link" href="process_commu.html">5.2 进程间有哪些通信方式？</a></li><li><a class="sidebar-link" href="multithread_sync.html">5.3 多线程冲突了怎么办？</a></li><li><a aria-current="page" class="active sidebar-link" href="deadlock.html">5.4 怎么避免死锁？</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#死锁的概念">死锁的概念</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#互斥条件">互斥条件</a></li><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#持有并等待条件">持有并等待条件</a></li><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#不可剥夺条件">不可剥夺条件</a></li><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#环路等待条件">环路等待条件</a></li></ul></li><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#模拟死锁问题的产生">模拟死锁问题的产生</a></li><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#利用工具排查死锁问题">利用工具排查死锁问题</a></li><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#避免死锁问题的发生">避免死锁问题的发生</a></li><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#总结">总结</a></li><li class="sidebar-sub-header"><a class="sidebar-link" href="deadlock.html#关注作者">关注作者</a></li></ul></li><li><a class="sidebar-link" href="pessim_and_optimi_lock.html">5.5 什么是悲观锁、乐观锁？</a></li><li><a class="sidebar-link" href="create_thread_max.html">5.6 一个进程最多可以创建多少个线程？</a></li><li><a class="sidebar-link" href="thread_crash.html">5.7 线程崩溃了，进程也会崩溃吗？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>06｜调度算法篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../5_schedule/schedule.html">6.1 进程调度/页面置换/磁盘调度算法</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>07｜文件系统篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../6_file_system/file_system.html">7.1 文件系统全家桶</a></li><li><a class="sidebar-link" href="../6_file_system/pagecache.html">7.2 进程写文件时，进程发生了崩溃，已写入的数据会丢失吗？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>08｜设备管理篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../7_device/device.html">8.1 键盘敲入 A 字母时，操作系统期间发生了什么？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>09｜网络系统篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../8_network_system/zero_copy.html">9.1 什么是零拷贝？</a></li><li><a class="sidebar-link" href="../8_network_system/selete_poll_epoll.html">9.2 I/O 多路复用：select/poll/epoll</a></li><li><a class="sidebar-link" href="../8_network_system/reactor.html">9.3 高性能网络模式：Reactor 和 Proactor</a></li><li><a class="sidebar-link" href="../8_network_system/hash.html">9.4 什么是一致性哈希？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>10｜Linux 命令篇</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../9_linux_cmd/linux_network.html">10.1 如何查看网络的性能指标？</a></li><li><a class="sidebar-link" href="../9_linux_cmd/pv_uv.html">10.2  如何从日志分析 PV、UV？</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span>11｜学习心得</span> <!-- --></p> <ul class="sidebar-links sidebar-group-items"><li><a class="sidebar-link" href="../10_learn/learn_os.html">11.1 操作系统怎么学？</a></li><li><a class="sidebar-link" href="../10_learn/draw.html">11.2 画图经验分享</a></li></ul></section></li></ul> </aside> <div><main class="page" style="/*padding-right: 80px;*/"> <div class="theme-default-content content__default" style="max-width:740px;margin:0px auto;padding:2rem 2.5rem;"><h1 id="_5-4-怎么避免死锁"><a class="header-anchor" href="#_5-4-怎么避免死锁">#</a> 5.4 怎么避免死锁？</h1> <p>面试过程中，死锁也是高频的考点，因为如果线上环境真多发生了死锁，那真的出大事了。</p> <p>这次，我们就来系统地聊聊死锁的问题。</p> <ul><li>死锁的概念；</li> <li>模拟死锁问题的产生；</li> <li>利用工具排查死锁问题；</li> <li>避免死锁问题的发生；</li></ul> <hr/> <h2 id="死锁的概念"><a class="header-anchor" href="#死锁的概念">#</a> 死锁的概念</h2> <p>在多线程编程中，我们为了防止多线程竞争共享资源而导致数据错乱，都会在操作共享资源之前加上互斥锁，只有成功获得到锁的线程，才能操作共享资源，获取不到锁的线程就只能等待，直到锁被释放。</p> <p>那么，当两个线程为了保护两个不同的共享资源而使用了两个互斥锁，那么这两个互斥锁应用不当的时候，可能会造成<strong>两个线程都在等待对方释放锁</strong>，在没有外力的作用下，这些线程会一直相互等待，就没办法继续运行，这种情况就是发生了<strong>死锁</strong>。</p> <p>举个例子，小林拿了小美房间的钥匙，而小林在自己的房间里，小美拿了小林房间的钥匙，而小美也在自己的房间里。如果小林要从自己的房间里出去，必须拿到小美手中的钥匙，但是小美要出去，又必须拿到小林手中的钥匙，这就形成了死锁。</p> <p>死锁只有<strong>同时满足</strong>以下四个条件才会发生：</p> <ul><li>互斥条件；</li> <li>持有并等待条件；</li> <li>不可剥夺条件；</li> <li>环路等待条件；</li></ul> <h3 id="互斥条件"><a class="header-anchor" href="#互斥条件">#</a> 互斥条件</h3> <p>互斥条件是指<strong>多个线程不能同时使用同一个资源</strong>。</p> <p>比如下图，如果线程 A 已经持有的资源，不能再同时被线程 B 持有，如果线程 B 请求获取线程 A 已经占用的资源，那线程 B 只能等待，直到线程 A 释放了资源。</p> <p><img alt="" src="https://cdn.xiaolincoding.com/gh/xiaolincoder/ImageHost4@main/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E6%AD%BB%E9%94%81/%E4%BA%92%E6%96%A5%E6%9D%A1%E4%BB%B6.png"/></p> <h3 id="持有并等待条件"><a class="header-anchor" href="#持有并等待条件">#</a> 持有并等待条件</h3> <p>持有并等待条件是指，当线程 A 已经持有了资源 1，又想申请资源 2，而资源 2 已经被线程 C 持有了，所以线程  A 就会处于等待状态，但是<strong>线程  A 在等待资源 2 的同时并不会释放自己已经持有的资源 1</strong>。</p> <p><img alt="" src="https://cdn.xiaolincoding.com/gh/xiaolincoder/ImageHost4@main/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E6%AD%BB%E9%94%81/%E6%8C%81%E6%9C%89%E5%B9%B6%E7%AD%89%E5%BE%85%E6%9D%A1%E4%BB%B6.png"/></p> <h3 id="不可剥夺条件"><a class="header-anchor" href="#不可剥夺条件">#</a> 不可剥夺条件</h3> <p>不可剥夺条件是指，当线程已经持有了资源 ，<strong>在自己使用完之前不能被其他线程获取</strong>，线程 B 如果也想使用此资源，则只能在线程 A 使用完并释放后才能获取。</p> <p><img alt="" src="https://cdn.xiaolincoding.com/gh/xiaolincoder/ImageHost4@main/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E6%AD%BB%E9%94%81/%E4%B8%8D%E5%8F%AF%E5%89%A5%E5%A4%BA%E6%9D%A1%E4%BB%B6.png"/></p> <h3 id="环路等待条件"><a class="header-anchor" href="#环路等待条件">#</a> 环路等待条件</h3> <p>环路等待条件指的是，在死锁发生的时候，<strong>两个线程获取资源的顺序构成了环形链</strong>。</p> <p>比如，线程 A 已经持有资源 2，而想请求资源 1， 线程 B 已经获取了资源 1，而想请求资源 2，这就形成资源请求等待的环形图。</p> <p><img alt="" src="https://cdn.xiaolincoding.com/gh/xiaolincoder/ImageHost4@main/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E6%AD%BB%E9%94%81/%E7%8E%AF%E8%B7%AF%E7%AD%89%E5%BE%85%E6%9D%A1%E4%BB%B6.png"/></p> <hr/> <h2 id="模拟死锁问题的产生"><a class="header-anchor" href="#模拟死锁问题的产生">#</a> 模拟死锁问题的产生</h2> <p>Talk is cheap. Show me the code.</p> <p>下面，我们用代码来模拟死锁问题的产生。</p> <p>首先，我们先创建 2 个线程，分别为线程 A 和 线程 B，然后有两个互斥锁，分别是 mutex_A 和 mutex_B，代码如下：</p> <div class="language-c extra-class"><pre class="language-c"><code><span class="token class-name">pthread_mutex_t</span> mutex_A <span class="token operator">=</span> PTHREAD_MUTEX_INITIALIZER<span class="token punctuation">;</span>
+<span class="token class-name">pthread_mutex_t</span> mutex_B <span class="token operator">=</span> PTHREAD_MUTEX_INITIALIZER<span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+    <span class="token class-name">pthread_t</span> tidA<span class="token punctuation">,</span> tidB<span class="token punctuation">;</span>
+    
+    <span class="token comment">//创建两个线程</span>
+    <span class="token function">pthread_create</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>tidA<span class="token punctuation">,</span> <span class="token constant">NULL</span><span class="token punctuation">,</span> threadA_proc<span class="token punctuation">,</span> <span class="token constant">NULL</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_create</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>tidB<span class="token punctuation">,</span> <span class="token constant">NULL</span><span class="token punctuation">,</span> threadB_proc<span class="token punctuation">,</span> <span class="token constant">NULL</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">pthread_join</span><span class="token punctuation">(</span>tidA<span class="token punctuation">,</span> <span class="token constant">NULL</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_join</span><span class="token punctuation">(</span>tidB<span class="token punctuation">,</span> <span class="token constant">NULL</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"exit\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>接下来，我们看下线程 A 函数做了什么。</p> <div class="language-c extra-class"><pre class="language-c"><code><span class="token comment">//线程函数 A</span>
+<span class="token keyword">void</span> <span class="token operator">*</span><span class="token function">threadA_proc</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>data<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread A waiting get ResourceA \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_mutex_lock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_A<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread A got ResourceA \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread A waiting get ResourceB \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_mutex_lock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_B<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread A got ResourceB \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">pthread_mutex_unlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_B<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_mutex_unlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_A<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">)</span><span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>可以看到，线程 A 函数的过程：</p> <ul><li>先获取互斥锁 A，然后睡眠 1 秒；</li> <li>再获取互斥锁 B，然后释放互斥锁 B；</li> <li>最后释放互斥锁 A；</li></ul> <div class="language-c extra-class"><pre class="language-c"><code><span class="token comment">//线程函数 B</span>
+<span class="token keyword">void</span> <span class="token operator">*</span><span class="token function">threadB_proc</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>data<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread B waiting get ResourceB \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_mutex_lock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_B<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread B got ResourceB \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread B waiting  get ResourceA \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_mutex_lock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_A<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread B got ResourceA \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">pthread_mutex_unlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_A<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_mutex_unlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_B<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">)</span><span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>可以看到，线程 B 函数的过程：</p> <ul><li>先获取互斥锁 B，然后睡眠 1 秒；</li> <li>再获取互斥锁 A，然后释放互斥锁 A；</li> <li>最后释放互斥锁 B；</li></ul> <p>然后，我们运行这个程序，运行结果如下：</p> <div class="language-shell extra-class"><pre class="language-shell"><code>thread B waiting get ResourceB 
+thread B got ResourceB 
+thread A waiting get ResourceA 
+thread A got ResourceA 
+thread B waiting get ResourceA 
+thread A waiting get ResourceB 
+// 阻塞中。。。
+</code></pre></div><p>可以看到线程 B 在等待互斥锁 A 的释放，线程 A 在等待互斥锁 B 的释放，双方都在等待对方资源的释放，很明显，产生了死锁问题。</p> <hr/> <h2 id="利用工具排查死锁问题"><a class="header-anchor" href="#利用工具排查死锁问题">#</a> 利用工具排查死锁问题</h2> <p>如果你想排查你的 Java 程序是否死锁，则可以使用 <code>jstack</code> 工具，它是 jdk 自带的线程堆栈分析工具。</p> <p>由于小林的死锁代码例子是 C 写的，在 Linux 下，我们可以使用 <code>pstack</code> + <code>gdb</code> 工具来定位死锁问题。</p> <p>pstack 命令可以显示每个线程的栈跟踪信息（函数调用过程），它的使用方式也很简单，只需要 <code>pstack &lt;pid&gt;</code> 就可以了。</p> <p>那么，在定位死锁问题时，我们可以多次执行 pstack 命令查看线程的函数调用过程，多次对比结果，确认哪几个线程一直没有变化，且是因为在等待锁，那么大概率是由于死锁问题导致的。</p> <p>我用 pstack 输出了我前面模拟死锁问题的进程的所有线程的情况，我多次执行命令后，其结果都一样，如下：</p> <div class="language-shell extra-class"><pre class="language-shell"><code>$ pstack <span class="token number">87746</span>
+Thread <span class="token number">3</span> <span class="token punctuation">(</span>Thread 0x7f60a610a700 <span class="token punctuation">(</span>LWP <span class="token number">87747</span><span class="token punctuation">))</span>:
+<span class="token comment">#0  0x0000003720e0da1d in __lll_lock_wait () from /lib64/libpthread.so.0</span>
+<span class="token comment">#1  0x0000003720e093ca in _L_lock_829 () from /lib64/libpthread.so.0</span>
+<span class="token comment">#2  0x0000003720e09298 in pthread_mutex_lock () from /lib64/libpthread.so.0</span>
+<span class="token comment">#3  0x0000000000400725 in threadA_proc ()</span>
+<span class="token comment">#4  0x0000003720e07893 in start_thread () from /lib64/libpthread.so.0</span>
+<span class="token comment">#5  0x00000037206f4bfd in clone () from /lib64/libc.so.6</span>
+Thread <span class="token number">2</span> <span class="token punctuation">(</span>Thread 0x7f60a5709700 <span class="token punctuation">(</span>LWP <span class="token number">87748</span><span class="token punctuation">))</span>:
+<span class="token comment">#0  0x0000003720e0da1d in __lll_lock_wait () from /lib64/libpthread.so.0</span>
+<span class="token comment">#1  0x0000003720e093ca in _L_lock_829 () from /lib64/libpthread.so.0</span>
+<span class="token comment">#2  0x0000003720e09298 in pthread_mutex_lock () from /lib64/libpthread.so.0</span>
+<span class="token comment">#3  0x0000000000400792 in threadB_proc ()</span>
+<span class="token comment">#4  0x0000003720e07893 in start_thread () from /lib64/libpthread.so.0</span>
+<span class="token comment">#5  0x00000037206f4bfd in clone () from /lib64/libc.so.6</span>
+Thread <span class="token number">1</span> <span class="token punctuation">(</span>Thread 0x7f60a610c700 <span class="token punctuation">(</span>LWP <span class="token number">87746</span><span class="token punctuation">))</span>:
+<span class="token comment">#0  0x0000003720e080e5 in pthread_join () from /lib64/libpthread.so.0</span>
+<span class="token comment">#1  0x0000000000400806 in main ()</span>
+
+<span class="token punctuation">..</span><span class="token punctuation">..</span>
+
+$ pstack <span class="token number">87746</span>
+Thread <span class="token number">3</span> <span class="token punctuation">(</span>Thread 0x7f60a610a700 <span class="token punctuation">(</span>LWP <span class="token number">87747</span><span class="token punctuation">))</span>:
+<span class="token comment">#0  0x0000003720e0da1d in __lll_lock_wait () from /lib64/libpthread.so.0</span>
+<span class="token comment">#1  0x0000003720e093ca in _L_lock_829 () from /lib64/libpthread.so.0</span>
+<span class="token comment">#2  0x0000003720e09298 in pthread_mutex_lock () from /lib64/libpthread.so.0</span>
+<span class="token comment">#3  0x0000000000400725 in threadA_proc ()</span>
+<span class="token comment">#4  0x0000003720e07893 in start_thread () from /lib64/libpthread.so.0</span>
+<span class="token comment">#5  0x00000037206f4bfd in clone () from /lib64/libc.so.6</span>
+Thread <span class="token number">2</span> <span class="token punctuation">(</span>Thread 0x7f60a5709700 <span class="token punctuation">(</span>LWP <span class="token number">87748</span><span class="token punctuation">))</span>:
+<span class="token comment">#0  0x0000003720e0da1d in __lll_lock_wait () from /lib64/libpthread.so.0</span>
+<span class="token comment">#1  0x0000003720e093ca in _L_lock_829 () from /lib64/libpthread.so.0</span>
+<span class="token comment">#2  0x0000003720e09298 in pthread_mutex_lock () from /lib64/libpthread.so.0</span>
+<span class="token comment">#3  0x0000000000400792 in threadB_proc ()</span>
+<span class="token comment">#4  0x0000003720e07893 in start_thread () from /lib64/libpthread.so.0</span>
+<span class="token comment">#5  0x00000037206f4bfd in clone () from /lib64/libc.so.6</span>
+Thread <span class="token number">1</span> <span class="token punctuation">(</span>Thread 0x7f60a610c700 <span class="token punctuation">(</span>LWP <span class="token number">87746</span><span class="token punctuation">))</span>:
+<span class="token comment">#0  0x0000003720e080e5 in pthread_join () from /lib64/libpthread.so.0</span>
+<span class="token comment">#1  0x0000000000400806 in main ()</span>
+</code></pre></div><p>可以看到，Thread 2 和 Thread 3 一直阻塞获取锁（<em>pthread_mutex_lock</em>）的过程，而且 pstack 多次输出信息都没有变化，那么可能大概率发生了死锁。</p> <p>但是，还不能够确认这两个线程是在互相等待对方的锁的释放，因为我们看不到它们是等在哪个锁对象，于是我们可以使用 gdb 工具进一步确认。</p> <p>整个 gdb 调试过程，如下：</p> <div class="language-shell extra-class"><pre class="language-shell"><code>// gdb 命令
+$ gdb -p <span class="token number">87746</span>
+
+// 打印所有的线程信息
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> info thread
+  <span class="token number">3</span> Thread 0x7f60a610a700 <span class="token punctuation">(</span>LWP <span class="token number">87747</span><span class="token punctuation">)</span>  0x0000003720e0da1d <span class="token keyword">in</span> __lll_lock_wait <span class="token punctuation">(</span><span class="token punctuation">)</span> from /lib64/libpthread.so.0
+  <span class="token number">2</span> Thread 0x7f60a5709700 <span class="token punctuation">(</span>LWP <span class="token number">87748</span><span class="token punctuation">)</span>  0x0000003720e0da1d <span class="token keyword">in</span> __lll_lock_wait <span class="token punctuation">(</span><span class="token punctuation">)</span> from /lib64/libpthread.so.0
+* <span class="token number">1</span> Thread 0x7f60a610c700 <span class="token punctuation">(</span>LWP <span class="token number">87746</span><span class="token punctuation">)</span>  0x0000003720e080e5 <span class="token keyword">in</span> pthread_join <span class="token punctuation">(</span><span class="token punctuation">)</span> from /lib64/libpthread.so.0
+//最左边的 * 表示 gdb 锁定的线程，切换到第二个线程去查看
+
+// 切换到第2个线程
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> thread <span class="token number">2</span>
+<span class="token punctuation">[</span>Switching to thread <span class="token number">2</span> <span class="token punctuation">(</span>Thread 0x7f60a5709700 <span class="token punctuation">(</span>LWP <span class="token number">87748</span><span class="token punctuation">))</span><span class="token punctuation">]</span><span class="token comment">#0  0x0000003720e0da1d in __lll_lock_wait () from /lib64/libpthread.so.0 </span>
+
+// bt 可以打印函数堆栈，却无法看到函数参数，跟 pstack 命令一样 
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> bt
+<span class="token comment">#0  0x0000003720e0da1d in __lll_lock_wait () from /lib64/libpthread.so.0</span>
+<span class="token comment">#1  0x0000003720e093ca in _L_lock_829 () from /lib64/libpthread.so.0</span>
+<span class="token comment">#2  0x0000003720e09298 in pthread_mutex_lock () from /lib64/libpthread.so.0</span>
+<span class="token comment">#3  0x0000000000400792 in threadB_proc (data=0x0) at dead_lock.c:25</span>
+<span class="token comment">#4  0x0000003720e07893 in start_thread () from /lib64/libpthread.so.0</span>
+<span class="token comment">#5  0x00000037206f4bfd in clone () from /lib64/libc.so.6</span>
+
+// 打印第三帧信息，每次函数调用都会有压栈的过程，而 frame 则记录栈中的帧信息
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> frame <span class="token number">3</span>
+<span class="token comment">#3  0x0000000000400792 in threadB_proc (data=0x0) at dead_lock.c:25</span>
+<span class="token number">27</span>    printf<span class="token punctuation">(</span><span class="token string">"thread B waiting get ResourceA <span class="token entity" title="\n">\n</span>"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token number">28</span>    pthread_mutex_lock<span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_A<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+// 打印mutex_A的值 ,  __owner表示gdb中标示线程的值，即LWP
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> p mutex_A
+<span class="token variable">$1</span> <span class="token operator">=</span> <span class="token punctuation">{</span>__data <span class="token operator">=</span> <span class="token punctuation">{</span>__lock <span class="token operator">=</span> <span class="token number">2</span>, __count <span class="token operator">=</span> <span class="token number">0</span>, __owner <span class="token operator">=</span> <span class="token number">87747</span>, __nusers <span class="token operator">=</span> <span class="token number">1</span>, __kind <span class="token operator">=</span> <span class="token number">0</span>, __spins <span class="token operator">=</span> <span class="token number">0</span>, __list <span class="token operator">=</span> <span class="token punctuation">{</span>__prev <span class="token operator">=</span> 0x0, __next <span class="token operator">=</span> 0x0<span class="token punctuation">}</span><span class="token punctuation">}</span>, 
+  __size <span class="token operator">=</span> <span class="token string">"<span class="token entity" title="\002">\002</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\303">\303</span>V<span class="token entity" title="\001">\001</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\001">\001</span>"</span>, <span class="token string">'\000'</span> <span class="token operator">&lt;</span>repeats <span class="token number">26</span> times<span class="token operator">&gt;</span>, __align <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">}</span>
+
+// 打印mutex_B的值 ,  __owner表示gdb中标示线程的值，即LWP
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> p mutex_B
+<span class="token variable">$2</span> <span class="token operator">=</span> <span class="token punctuation">{</span>__data <span class="token operator">=</span> <span class="token punctuation">{</span>__lock <span class="token operator">=</span> <span class="token number">2</span>, __count <span class="token operator">=</span> <span class="token number">0</span>, __owner <span class="token operator">=</span> <span class="token number">87748</span>, __nusers <span class="token operator">=</span> <span class="token number">1</span>, __kind <span class="token operator">=</span> <span class="token number">0</span>, __spins <span class="token operator">=</span> <span class="token number">0</span>, __list <span class="token operator">=</span> <span class="token punctuation">{</span>__prev <span class="token operator">=</span> 0x0, __next <span class="token operator">=</span> 0x0<span class="token punctuation">}</span><span class="token punctuation">}</span>, 
+  __size <span class="token operator">=</span> <span class="token string">"<span class="token entity" title="\002">\002</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\304">\304</span>V<span class="token entity" title="\001">\001</span><span class="token entity" title="\000">\000</span><span class="token entity" title="\001">\001</span>"</span>, <span class="token string">'\000'</span> <span class="token operator">&lt;</span>repeats <span class="token number">26</span> times<span class="token operator">&gt;</span>, __align <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">}</span>  
+</code></pre></div><p>我来解释下，上面的调试过程：</p> <ol><li>通过 <code>info thread</code> 打印了所有的线程信息，可以看到有 3 个线程，一个是主线程（LWP 87746），另外两个都是我们自己创建的线程（LWP 87747 和 87748）；</li> <li>通过 <code>thread 2</code>，将切换到第 2 个线程（LWP 87748）；</li> <li>通过 <code>bt</code>，打印线程的调用栈信息，可以看到有 threadB_proc 函数，说明这个是线程 B 函数，也就说 LWP 87748 是线程 B;</li> <li>通过 <code>frame 3</code>，打印调用栈中的第三个帧的信息，可以看到线程 B 函数，在获取互斥锁 A 的时候阻塞了；</li> <li>通过 <code>p mutex_A</code>，打印互斥锁 A 对象信息，可以看到它被 LWP 为 87747（线程 A） 的线程持有着；</li> <li>通过 <code>p mutex_B</code>，打印互斥锁 B 对象信息，可以看到他被 LWP 为 87748 （线程 B） 的线程持有着；</li></ol> <p>因为线程 B 在等待线程 A 所持有的 mutex_A, 而同时线程 A 又在等待线程 B 所拥有的mutex_B, 所以可以断定该程序发生了死锁。</p> <hr/> <h2 id="避免死锁问题的发生"><a class="header-anchor" href="#避免死锁问题的发生">#</a> 避免死锁问题的发生</h2> <p>前面我们提到，产生死锁的四个必要条件是：互斥条件、持有并等待条件、不可剥夺条件、环路等待条件。</p> <p>那么避免死锁问题就只需要破坏其中一个条件就可以，最常见的并且可行的就是<strong>使用资源有序分配法，来破坏环路等待条件</strong>。</p> <p>那什么是资源有序分配法呢？</p> <p>线程 A 和 线程 B 获取资源的顺序要一样，当线程 A 是先尝试获取资源 A，然后尝试获取资源  B 的时候，线程 B 同样也是先尝试获取资源 A，然后尝试获取资源 B。也就是说，线程 A 和 线程 B 总是以相同的顺序申请自己想要的资源。</p> <p>我们使用资源有序分配法的方式来修改前面发生死锁的代码，我们可以不改动线程 A 的代码。</p> <p>我们先要清楚线程 A 获取资源的顺序，它是先获取互斥锁 A，然后获取互斥锁 B。</p> <p>所以我们只需将线程 B 改成以相同顺序的获取资源，就可以打破死锁了。</p> <p><img alt="" src="https://cdn.xiaolincoding.com/gh/xiaolincoder/ImageHost4@main/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/%E6%AD%BB%E9%94%81/%E8%B5%84%E6%BA%90%E6%9C%89%E5%BA%8F%E5%88%86%E9%85%8D.png"/></p> <p>线程 B 函数改进后的代码如下：</p> <div class="language-c extra-class"><pre class="language-c"><code><span class="token comment">//线程 B 函数，同线程 A 一样，先获取互斥锁 A，然后获取互斥锁 B</span>
+<span class="token keyword">void</span> <span class="token operator">*</span><span class="token function">threadB_proc</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span>data<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread B waiting get ResourceA \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_mutex_lock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_A<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread B got ResourceA \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread B waiting  get ResourceB \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_mutex_lock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_B<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"thread B got ResourceB \n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">pthread_mutex_unlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_B<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">pthread_mutex_unlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>mutex_A<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">)</span><span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre></div><p>执行结果如下，可以看，没有发生死锁。</p> <div class="language-shell extra-class"><pre class="language-shell"><code>thread B waiting get ResourceA 
+thread B got ResourceA 
+thread A waiting get ResourceA 
+thread B waiting  get ResourceB 
+thread B got ResourceB 
+thread A got ResourceA 
+thread A waiting get ResourceB 
+thread A got ResourceB
+<span class="token builtin class-name">exit</span>
+</code></pre></div><hr/> <h2 id="总结"><a class="header-anchor" href="#总结">#</a> 总结</h2> <p>简单来说，死锁问题的产生是由两个或者以上线程并行执行的时候，争夺资源而互相等待造成的。</p> <p>死锁只有同时满足互斥、持有并等待、不可剥夺、环路等待这四个条件的时候才会发生。</p> <p>所以要避免死锁问题，就是要破坏其中一个条件即可，最常用的方法就是使用资源有序分配法来破坏环路等待条件。</p> <hr/> <h2 id="关注作者"><a class="header-anchor" href="#关注作者">#</a> 关注作者</h2> <p><em><strong>哈喽，我是小林，就爱图解计算机基础，如果觉得文章对你有帮助，欢迎微信搜索「小林coding」，关注后，回复「网络」再送你图解网络 PDF</strong></em></p> <p><img alt="" src="https://cdn.xiaolincoding.com/gh/xiaolincoder/ImageHost3@main/%E5%85%B6%E4%BB%96/%E5%85%AC%E4%BC%97%E5%8F%B7%E4%BB%8B%E7%BB%8D.png"/></p></div> <footer class="page-edit" style="max-width: 740px;  margin: 0px auto;padding: 2rem 2.5rem;"><!-- --> <div class="last-updated"><span class="prefix">上次更新: </span> <span class="time">4/14/2026</span></div></footer> <div class="page-nav" style="max-width: 740px;  margin: 0px auto;padding: 2rem 2.5rem;"><p class="inner"><span class="prev">
+        ←
+        <a class="prev" href="multithread_sync.html">
+          5.3 多线程冲突了怎么办？
+        </a></span> <span class="next"><a href="pessim_and_optimi_lock.html">
+          5.5 什么是悲观锁、乐观锁？
+        </a>
+        →
+      </span></p></div> <!-- --></main></div> <aside class="page-sidebar"> <div class="page-side-toolbar"><!-- --> <div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/toc.png"/> <span class="show-txt">目录</span></div> <div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/toggle.png" width="30px"/> <span class="show-txt">侧边栏</span></div> <div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/dark.svg" width="30px"/> <span class="show-txt">夜间</span></div> <div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/wexin4.png" width="25px"/> <span class="show-txt">技术群</span> <div class="toc-container"><div class="pos-box"><div class="icon-arrow"></div> <div class="scroll-box" style="text-align:center"><span style="font-size:0.7rem;font-weight:bold;">关注小林的公众号，回复<span style="color:red;">「加群」</span>，拉你进百人技术交流群</span> <img height="180px" src="https://cdn.xiaolincoding.com/gh/xiaolincoder/xiaolincoding.jpeg" style="margin:10px;"/>
+	       公众号：小林coding
+              </div></div></div></div> <div class="option-box"><a href="https://www.xiaolincoding.com/project/agent_info.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/project.png" width="25px"/> <span class="show-txt">Agent项目</span></div></a></div> <div class="option-box"><a href="https://www.xiaolincoding.com/other/llm_offer.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/offer.png" width="25px"/> <span class="show-txt">训练营</span></div></a></div> <div class="option-box"><a href="https://mianshiya.com/?shareCode=xeu1wi"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/mianshiya_logo.jpeg" width="25px"/> <span class="show-txt">面试鸭</span></div></a></div> <div class="option-box"><a href="https://www.xiaolincoding.com/project/xiaolinjianli.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/xiaolinjianli.webp" width="25px"/> <span class="show-txt">做简历</span></div></a></div> <div class="option-box"><a href="https://www.xiaolincoding.com/cs_learn/pdf.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/download.png" width="25px"/> <span class="show-txt">PDF下载</span></div></a></div> <div class="option-box"><a href="https://www.xiaolincoding.com/cs_learn/reward.html"><div class="option-box"><img class="nozoom" src="https://cdn.xiaolincoding.com/red-heart.png" width="25px"/> <span class="show-txt">赞赏我</span></div></a></div> <div class="option-box" style="padding-left:2px;text-align:center;" title="5.3 多线程冲突了怎么办？"><a href="multithread_sync.html"><img class="nozoom" src="https://cdn.xiaolincoding.com/pre2.png" width="30px"/> <span class="show-txt">上一篇</span></a></div> <div class="option-box" style="padding-left:2px;text-align:center;" title="5.5 什么是悲观锁、乐观锁？"><a href="pessim_and_optimi_lock.html"><img class="nozoom" src="https://cdn.xiaolincoding.com/next2.png" width="30px"/> <span class="show-txt">下一篇</span></a></div></div> <!-- --> </aside> <!-- --></div><div class="global-ui"><!-- --><div></div></div></div>
+
+</body>
+</html>
